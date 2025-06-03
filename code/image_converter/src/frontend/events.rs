@@ -2,6 +2,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs;
 use std::path::PathBuf;
 use crate::converter::formats::ImageFormat;
+use crate::converter::main_converter;
 
 #[derive(Debug)]
 pub enum AppEvent {
@@ -130,7 +131,7 @@ impl AppState {
     }
 
     pub fn move_down(&mut self) {
-        if !self.entries.is_empty() && self.selected_index < self.entries.len() - 1 {
+        if !self.entries.is_empty() && self.selected_index < self.entries.len() {
             self.selected_index += 1;
         }
     }
@@ -152,7 +153,6 @@ impl AppState {
                 ImageFormat::JPEG,
                 ImageFormat::WEBP,
                 ImageFormat::GIF,
-                ImageFormat::ICO,
                 ImageFormat::BMP,
             ];
             
@@ -165,8 +165,13 @@ impl AppState {
                 format!("{:?}", selected_format).to_uppercase()
             ));
 
-            // TODO - Convertion logic
-            
+            main_converter::convert(
+                &file_path,
+                &selected_format,
+            ).unwrap_or_else(|e| {
+                self.status_message = Some(format!("Conversion error: {}", e));
+            });
+            self.refresh_entries();
         }
     }
 }

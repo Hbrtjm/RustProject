@@ -7,7 +7,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
+    backend::{CrosstermBackend},
     Terminal,
 };
 use std::{
@@ -25,21 +25,18 @@ use frontend::ui::draw;
 const TICK_RATE: Duration = Duration::from_millis(250);
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal: Terminal<CrosstermBackend<std::io::Stdout>> = Terminal::new(backend)?;
 
-    // Initialize app state
     let cwd = env::current_dir().unwrap_or_else(|_| {
         dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"))
     });
     
     let mut app = AppState::new(cwd);
 
-    // Setup input handling
     let (tx, rx) = mpsc::channel();
     let tick_rate = TICK_RATE;
     
@@ -64,13 +61,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    // Main loop
     loop {
         terminal.draw(|f: &mut ratatui::Frame | draw::<CrosstermBackend<std::io::Stdout>>(f, &app))?;
 
         match rx.recv()? {
             AppEvent::Input(key) => {
-                // Handle quit with 'q' key specifically
                 if key.code == KeyCode::Char('q') && app.command_buffer.is_empty() {
                     break;
                 }
@@ -80,7 +75,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             AppEvent::Tick => {
-                // Handle periodic updates if needed
             }
         }
     }
@@ -94,7 +88,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     terminal.show_cursor()?;
 
-    // Print conversion summary
     if !app.to_convert.is_empty() {
         println!("Selected files for conversion:");
         for (path, format) in &app.to_convert {

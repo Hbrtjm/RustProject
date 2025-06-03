@@ -12,6 +12,4 @@ pub enum ConverterError {
     ConversionError(String),
     #[error("Write error: {0}")]
     WriteError(String),
-    #[error("Unknown error: {0}")]
-    UnknownError(String),
 }

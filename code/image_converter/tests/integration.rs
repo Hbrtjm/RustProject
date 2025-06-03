@@ -5,13 +5,13 @@ pub mod tests {
 
     #[test]
     fn png_to_jpeg_roundtrip() {
-        let input = Path::new("assets/samples/example.png");
-        let output = Path::new("tests/outputs/test.jpg");
-        let format = image_converter::converter::formats::ImageFormat::from_extension(input.to_str());
-        // Of course I have to borrow here, because it would be consumed twice...
-        convert(input, output, &ImageFormat::JPEG).unwrap();
-        // Optionally reopen `tests/outputs/test.jpg` and verify basic properties
+        let input = Path::new("assets/samples/flowey.png");
+        let output = Path::new("assets/samples/flowey.jpg");
+        convert(input, &ImageFormat::JPEG).unwrap();
         let img = image::open(output).unwrap();
         assert_eq!(img.color(), image::ColorType::Rgb8);
+        convert(output, &ImageFormat::PNG).unwrap();
+        let img = image::open(output).unwrap();
+        assert_eq!(img.color(), image::ColorType::Rgba8); // No complicated tests, just check if the image is not corrupted 
     }
 }

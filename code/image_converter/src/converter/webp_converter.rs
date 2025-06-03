@@ -42,27 +42,6 @@ pub fn convert_webp_to_gif(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
     Ok(out_buf)
 }
 
-/// Convert WebP to ICO format
-pub fn convert_webp_to_ico(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
-    let dyn_img: DynamicImage = image::load_from_memory(&input)
-        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
-    let rgba = dyn_img.to_rgba8();
-    let (w, h) = (rgba.width(), rgba.height());
-    let raw_pixels = rgba.into_raw();
-    
-    let ico_img = ico::IconImage::from_rgba_data(w as u32, h as u32, raw_pixels);
-    let mut icon_dir = ico::IconDir::new(ico::ResourceType::Icon);
-    icon_dir.add_entry(
-        ico::IconDirEntry::encode(&ico_img)
-            .map_err(|e| ConverterError::ConversionError(e.to_string()))?
-    );
-    
-    let mut buf = Vec::new();
-    icon_dir.write(&mut buf)
-        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
-    Ok(buf)
-}
-
 /// Convert WebP to BMP format
 pub fn convert_webp_to_bmp(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
     let dyn_img: DynamicImage = image::load_from_memory(&input)
@@ -74,13 +53,4 @@ pub fn convert_webp_to_bmp(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
         .write_to(&mut Cursor::new(&mut out_buf), ImgFmt::Bmp)
         .map_err(|e| ConverterError::WriteError(e.to_string()))?;
     Ok(out_buf)
-}
-
-/// Legacy function for compatibility with existing main_converter.rs
-/// Converts an RGBA8 pixel buffer to WebP format
-pub fn convert_to_webp(rgba_data: Vec<u8>, _format: &crate::converter::formats::ImageFormat) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    // Assuming the rgba_data comes from a to_rgba8().to_vec() call
-    // We need to determine dimensions - this is a limitation of the current API
-    // For now, we'll return an error suggesting to use the new API
-    Err("Use convert_*_to_webp functions instead for proper dimension handling".into())
 }

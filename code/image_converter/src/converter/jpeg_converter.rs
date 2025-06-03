@@ -1,5 +1,5 @@
 use crate::converter::errors::ConverterError;
-use image::{codecs::webp, DynamicImage, ImageFormat as ImgFmt};
+use image::{codecs::webp::WebPEncoder, ExtendedColorType, DynamicImage, ImageFormat as ImgFmt};
 use std::io::Cursor;
 
 /// Convert JPEG to PNG format
@@ -22,11 +22,12 @@ pub fn convert_jpeg_to_webp(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
     let rgba = dyn_img.to_rgba8();
     let (w, h) = (rgba.width(), rgba.height());
     let raw_pixels = rgba.into_raw();
-    
-    // Use the `webp` crate for better compression
-    let encoder = webp::Encoder::from_rgba(&raw_pixels, w as u32, h as u32);
-    let webp_mem = encoder.encode(80.0); // default quality = 80
-    Ok(webp_mem.into_vec())
+    let mut webp_mem = Cursor::new(Vec::new());
+    let encoder = WebPEncoder::new_lossless(&mut webp_mem);
+    encoder.encode(&raw_pixels, w as u32, h as u32, ExtendedColorType::Rgba8)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let result = webp_mem.clone().into_inner();
+    Ok(result)
 }
 
 /// Convert JPEG to GIF format
@@ -40,27 +41,6 @@ pub fn convert_jpeg_to_gif(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
         .write_to(&mut Cursor::new(&mut out_buf), ImgFmt::Gif)
         .map_err(|e| ConverterError::WriteError(e.to_string()))?;
     Ok(out_buf)
-}
-
-/// Convert JPEG to ICO format
-pub fn convert_jpeg_to_ico(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
-    let dyn_img: DynamicImage = image::load_from_memory(&input)
-        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
-    let rgba = dyn_img.to_rgba8();
-    let (w, h) = (rgba.width(), rgba.height());
-    let raw_pixels = rgba.into_raw();
-    
-    let ico_img = ico::IconImage::from_rgba_data(w as u32, h as u32, raw_pixels);
-    let mut icon_dir = ico::IconDir::new(ico::ResourceType::Icon);
-    icon_dir.add_entry(
-        ico::IconDirEntry::encode(&ico_img)
-            .map_err(|e| ConverterError::ConversionError(e.to_string()))?
-    );
-    
-    let mut buf = Vec::new();
-    icon_dir.write(&mut buf)
-        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
-    Ok(buf)
 }
 
 /// Convert JPEG to BMP format
