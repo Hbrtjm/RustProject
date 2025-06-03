@@ -1,5 +1,5 @@
 [package]
-name = "image-converter"
+name = "image_converter"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,9 +7,14 @@ edition = "2024"
 tempfile = "3.8"
 image = "0.25.6"
 image-webp = "0.2"
+# webp = { version = "0.1.3", features = ["libwebp_c"] }
 png = "0.17"
 jpeg-encoder = "0.6.1"
 color-eyre = "0.6.3"
 crossterm = "0.29.0"
 ratatui = "0.29.0"
 thiserror = "2.0.12"
+dirs = "5.0"
+gif = "0.11"
+ico = "0.3"
+bmp = "0.5"

@@ -1,0 +1,109 @@
+use crate::converter::errors::ConverterError;
+use image::{DynamicImage, ImageFormat as ImgFmt};
+use std::io::Cursor;
+
+/// Convert GIF to PNG format
+/// Note: This converts the first frame of animated GIFs
+pub fn convert_gif_to_png(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    let dyn_img: DynamicImage = image::load_from_memory(&input)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let rgba = dyn_img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    let mut out_buf = Vec::new();
+    DynamicImage::ImageRgba8(image::ImageBuffer::from_raw(w, h, rgba.into_raw()).unwrap())
+        .write_to(&mut Cursor::new(&mut out_buf), ImgFmt::Png)
+        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
+    Ok(out_buf)
+}
+
+/// Convert GIF to JPEG format
+/// Note: This converts the first frame of animated GIFs and removes transparency
+pub fn convert_gif_to_jpeg(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    let dyn_img: DynamicImage = image::load_from_memory(&input)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let rgb = dyn_img.to_rgb8(); // JPEG doesn't support alpha
+    let (w, h) = (rgb.width(), rgb.height());
+    let mut out_buf = Vec::new();
+    DynamicImage::ImageRgb8(image::ImageBuffer::from_raw(w, h, rgb.into_raw()).unwrap())
+        .write_to(&mut Cursor::new(&mut out_buf), ImgFmt::Jpeg)
+        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
+    Ok(out_buf)
+}
+
+/// Convert GIF to WebP format (lossy)
+/// Note: This converts the first frame of animated GIFs
+pub fn convert_gif_to_webp(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    let dyn_img: DynamicImage = image::load_from_memory(&input)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let rgba = dyn_img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    let raw_pixels = rgba.into_raw();
+    
+    // Use the `webp` crate for better compression
+    let encoder = webp::Encoder::from_rgba(&raw_pixels, w as u32, h as u32);
+    let webp_mem = encoder.encode(80.0); // default quality = 80
+    Ok(webp_mem.into_vec())
+}
+
+/// Convert GIF to ICO format
+/// Note: This converts the first frame of animated GIFs
+pub fn convert_gif_to_ico(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    let dyn_img: DynamicImage = image::load_from_memory(&input)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let rgba = dyn_img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    let raw_pixels = rgba.into_raw();
+    
+    let ico_img = ico::IconImage::from_rgba_data(w as u32, h as u32, raw_pixels);
+    let mut icon_dir = ico::IconDir::new(ico::ResourceType::Icon);
+    icon_dir.add_entry(
+        ico::IconDirEntry::encode(&ico_img)
+            .map_err(|e| ConverterError::ConversionError(e.to_string()))?
+    );
+    
+    let mut buf = Vec::new();
+    icon_dir.write(&mut buf)
+        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
+    Ok(buf)
+}
+
+/// Convert GIF to BMP format
+/// Note: This converts the first frame of animated GIFs
+pub fn convert_gif_to_bmp(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    let dyn_img: DynamicImage = image::load_from_memory(&input)
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    let rgba = dyn_img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    let mut out_buf = Vec::new();
+    DynamicImage::ImageRgba8(image::ImageBuffer::from_raw(w, h, rgba.into_raw()).unwrap())
+        .write_to(&mut Cursor::new(&mut out_buf), ImgFmt::Bmp)
+        .map_err(|e| ConverterError::WriteError(e.to_string()))?;
+    Ok(out_buf)
+}
+
+/// Advanced GIF to GIF conversion with animation support
+/// This function demonstrates how to handle animated GIFs using the gif crate
+#[allow(dead_code)]
+pub fn convert_gif_animated(input: Vec<u8>) -> Result<Vec<u8>, ConverterError> {
+    use gif::{Decoder, Encoder, Frame, Repeat};
+    use std::borrow::Cow;
+    
+    let mut decoder = Decoder::new(Cursor::new(&input))
+        .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+    
+    let mut output = Vec::new();
+    {
+        let mut encoder = Encoder::new(&mut output, decoder.width(), decoder.height(), &[])
+            .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+        encoder.set_repeat(Repeat::Infinite)
+            .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+        
+        while let Some(frame) = decoder.read_next_frame()
+            .map_err(|e| ConverterError::ConversionError(e.to_string()))? {
+            encoder.write_frame(frame)
+                .map_err(|e| ConverterError::ConversionError(e.to_string()))?;
+        }
+    }
+    
+    Ok(output)
+}
